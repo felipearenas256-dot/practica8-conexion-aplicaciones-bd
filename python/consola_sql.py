@@ -1,25 +1,31 @@
 """
-consola_sql.py – Consola donde se escriben CONSULTAS SQL (MySQL) o CÓDIGO PYTHON (MongoDB).
+consola_sql.py – Consola donde se escriben consultas SQL (MySQL), consultas de MongoDB
+(sintaxis mongosh, la misma de Compass) o código Python (pymongo).
 
-  - Si la línea empieza con una palabra SQL (SELECT, INSERT, UPDATE, DELETE, CALL,
-    SHOW, DESCRIBE, ...) se ejecuta en MySQL. Termine con ;  (puede ocupar varias líneas).
-  - Cualquier otra cosa se ejecuta como Python, con las colecciones de MongoDB listas:
+  - Empieza con una palabra SQL (SELECT, INSERT, UPDATE, CALL, SHOW...) -> MySQL. Termine con ;
+  - Empieza con db.  (o "show collections")                            -> MongoDB con mongosh
+  - Cualquier otra cosa                                                 -> Python (pymongo):
     perfiles, logs, preferencias, db.
 
 Los cambios se guardan al instante (autocommit) y la web los muestra sola en ~3 s.
 
 Ejecutar:  python consola_sql.py
 """
+import glob
+import os
 import pprint
 import re
+import shutil
+import subprocess
 import warnings
+from urllib.parse import urlsplit, urlunsplit
 
 import mysql.connector
 from bson import ObjectId
 from pymongo.cursor import Cursor
 from pymongo.command_cursor import CommandCursor
 
-from conexion import MONGO_DB, MYSQL_CONFIG, base_mongo
+from conexion import MONGO_DB, MONGO_URI, MYSQL_CONFIG, base_mongo
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -45,7 +51,21 @@ Escriba SQL (termina en ;) → se ejecuta en MySQL:
   CALL sp_resumen_curso(1, @i, @pr, @a); SELECT @i, @pr, @a;
   SHOW TABLES;     DESCRIBE Estudiante;
 
-Escriba Python → se ejecuta en MongoDB (colecciones: perfiles, logs, preferencias):
+Escriba consultas de MongoDB (como en Compass / mongosh) → empiezan con db.
+  show collections
+  db.estudiantes_perfil.find()
+  db.estudiantes_perfil.find({{ id_estudiante: 1 }})
+  db.estudiantes_perfil.find({{ intereses: "IA" }}, {{ _id: 0, nombre: 1, intereses: 1 }})
+  db.estudiantes_perfil.find({{ semillero: {{ $exists: true }} }})
+  db.estudiantes_perfil.insertOne({{ id_estudiante: 3, nombre: "Camila Torres", intereses: ["redes", "IA"] }})
+  db.estudiantes_perfil.updateOne({{ id_estudiante: 3 }}, {{ $push: {{ intereses: "Python" }} }})
+  db.estudiantes_perfil.deleteOne({{ id_estudiante: 3 }})
+  db.logs.find({{ accion: "LOGIN_FALLIDO" }}).sort({{ fecha: -1 }}).limit(5)
+  db.logs.countDocuments({{ accion: "LOGIN_OK" }})
+  db.logs.aggregate([{{ $group: {{ _id: "$accion", total: {{ $sum: 1 }} }} }}, {{ $sort: {{ total: -1 }} }}])
+  db.preferencias.find()
+
+O escriba Python (pymongo) con las colecciones perfiles, logs, preferencias:
   perfiles.find()
   perfiles.find({{"id_estudiante": 1}})
   perfiles.insert_one({{"id_estudiante": 3, "nombre": "Camila Torres", "intereses": ["redes"]}})
@@ -170,6 +190,43 @@ def ejecutar_python(codigo):
         print(f"ERROR: {type(err).__name__}: {err}")
 
 
+# ----------------------- MongoDB con mongosh (db.) -----------------------
+def buscar_mongosh():
+    """mongosh del PATH, de la variable MONGOSH o de la instalación portable en ~/mongodb."""
+    candidatos = [os.getenv("MONGOSH"), shutil.which("mongosh")]
+    candidatos += glob.glob(os.path.expanduser("~/mongodb/mongosh-*/bin/mongosh.exe"))
+    return next((c for c in candidatos if c and os.path.exists(c)), None)
+
+
+MONGOSH = buscar_mongosh()
+
+
+def uri_con_base():
+    """MONGO_URI con el nombre de la base, para que db. apunte a universidad_umb_nosql."""
+    p = urlsplit(MONGO_URI)
+    return urlunsplit((p.scheme, p.netloc, "/" + MONGO_DB, p.query, p.fragment))
+
+
+def es_mongo_shell(texto):
+    t = texto.strip().lower()
+    return t.startswith("db.") or t in ("show collections", "show collections;", "show dbs", "show dbs;")
+
+
+def ejecutar_mongosh(codigo):
+    print(f"\nmongosh> {codigo}")
+    if not MONGOSH:
+        print("ERROR: no se encontró mongosh. Use la sintaxis de Python: perfiles.find({...})")
+        return
+    try:
+        r = subprocess.run([MONGOSH, uri_con_base(), "--quiet", "--eval", codigo],
+                           capture_output=True, text=True, encoding="utf-8", timeout=60)
+    except subprocess.TimeoutExpired:
+        print("ERROR: la consulta tardó demasiado.")
+        return
+    salida = re.sub(r"\x1b\[[0-9;]*m", "", (r.stdout + r.stderr)).strip()   # quita colores ANSI
+    print(salida if salida else "OK")
+
+
 # ------------------------------- Bucle -------------------------------
 def es_sql(texto):
     primera = texto.lstrip().split(None, 1)[0].upper() if texto.strip() else ""
@@ -197,6 +254,9 @@ def main():
             continue
         if orden == "colecciones":
             print(" ", db.list_collection_names())
+            continue
+        if es_mongo_shell(texto):
+            ejecutar_mongosh(texto.rstrip(";"))
             continue
         if es_sql(texto):
             # Si la sentencia no termina en ; se siguen leyendo líneas
