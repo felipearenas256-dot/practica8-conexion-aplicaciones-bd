@@ -1,8 +1,8 @@
 """
 dao.py – Patrón DAO (Data Access Object).
 
-Cada clase concentra TODO el SQL de una tabla. El resto de la aplicación
-(menú de consola, Flask) solo llama métodos como EstudianteDAO.listar()
+Cada clase concentra TODO el SQL de una tabla. El resto del proyecto
+(menú de consola, web Flask) solo llama métodos como EstudianteDAO.listar()
 y nunca escribe SQL. Todas las consultas son PARAMETRIZADAS (%s + tupla):
 el conector envía los datos separados del SQL, así se evita la inyección.
 """
@@ -379,7 +379,7 @@ class UsuarioDAO:
 # MongoDB – datos no estructurados (logs y preferencias)
 # ======================================================================
 class LogDAO:
-    """Colección 'logs': un documento por acción realizada en la aplicación."""
+    """Colección 'logs': un documento por acción realizada en la web."""
 
     @staticmethod
     def registrar(usuario, accion, detalle=None):
@@ -488,5 +488,5 @@ def resumen_bases():
             "Preferencias": db.preferencias.count_documents({}),
         }
     except Exception:
-        resumen["mongo"] = None  # MongoDB apagado: la app sigue funcionando con MySQL
+        resumen["mongo"] = None  # MongoDB apagado: la web sigue funcionando con MySQL
     return resumen

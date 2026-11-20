@@ -97,7 +97,7 @@ def eliminar():
 
 
 def crear_usuario():
-    print("\n-- Crear usuario de la aplicación (contraseña con hash) --")
+    print("\n-- Crear usuario de la web (contraseña con hash) --")
     username = input("  Usuario: ").strip()
     password = input("  Contraseña: ").strip()
     rol = "ADMIN" if input("  ¿Es administrador? (s/n): ").lower() == "s" else "ESTUDIANTE"
@@ -112,7 +112,7 @@ def menu():
         "2": ("Consultar estudiantes", consultar),
         "3": ("Actualizar estudiante", actualizar),
         "4": ("Eliminar estudiante", eliminar),
-        "5": ("Crear usuario de la aplicación", crear_usuario),
+        "5": ("Crear usuario de la web", crear_usuario),
     }
     while True:
         print("\n========= SISTEMA ACADÉMICO UMB – CRUD =========")

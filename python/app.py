@@ -1,5 +1,5 @@
 """
-ACTIVIDAD 5 – Proyecto integrador: mini-aplicación web de gestión (Flask).
+ACTIVIDAD 5 – Proyecto integrador: página web de gestión académica (Flask).
 
   - MySQL  -> datos transaccionales: estudiantes, cursos, matrículas, usuarios,
               auditoría (SP, funciones y triggers de la Práctica 5).
@@ -37,7 +37,7 @@ MINUTOS_BLOQUEO = 10    # ...en esta ventana de tiempo
 
 
 def log(accion, detalle=None):
-    """Registra la acción en MongoDB; si Mongo no responde, la app sigue funcionando."""
+    """Registra la acción en MongoDB; si Mongo no responde, la web sigue funcionando."""
     try:
         LogDAO.registrar(session.get("usuario", "anónimo"), accion, detalle)
     except Exception as err:

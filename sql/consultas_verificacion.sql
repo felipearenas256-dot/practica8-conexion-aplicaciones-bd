@@ -2,7 +2,7 @@
 -- PRÁCTICA 8 – CONSULTAS DE VERIFICACIÓN
 -- Ejecutar en MySQL Workbench DESPUÉS de universidad_umb.sql y después
 -- de correr cada script de Python, para comprobar que los cambios hechos
--- desde la aplicación quedaron en la base de datos.
+-- desde la web y Python quedaron en la base de datos.
 -- =====================================================================
 USE universidad_umb;
 
@@ -78,6 +78,6 @@ PREPARE stmt FROM 'SELECT IdEstudiante, Nombre FROM Estudiante WHERE Apellido = 
 EXECUTE stmt USING @entrada;     -- 0 filas: la comilla no rompe la consulta
 DEALLOCATE PREPARE stmt;
 
--- V13. El trigger sigue protegiendo los datos aunque la orden venga de la app
+-- V13. El trigger sigue protegiendo los datos aunque la orden venga de la web
 -- (debe fallar con ERROR 1644: La nota debe estar entre 0.0 y 5.0)
 -- UPDATE Matricula SET NotaFinal = 7.0 WHERE IdMatricula = 1;

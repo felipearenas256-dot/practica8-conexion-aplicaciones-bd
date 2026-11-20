@@ -6,7 +6,7 @@
 -- Script completo de la base universidad_umb (Prácticas 1-5) + lo nuevo
 -- de la Práctica 8:
 --   1. Esquema: Estudiante, Curso, Matricula, Auditoria_Matricula
---   2. NUEVO: tabla Usuario (login de la mini-aplicación, contraseñas hash)
+--   2. NUEVO: tabla Usuario (login de la web, contraseñas hash)
 --   3. Datos de prueba
 --   4. Procedimientos almacenados de la Práctica 5 (con parámetros OUT)
 --   5. Funciones y triggers de la Práctica 5
@@ -64,7 +64,7 @@ CREATE TABLE Auditoria_Matricula (
 );
 
 -- ---------------------------------------------------------------------
--- 2. NUEVO EN LA PRÁCTICA 8: usuarios de la mini-aplicación (Actividad 5)
+-- 2. NUEVO EN LA PRÁCTICA 8: usuarios de la web (Actividad 5)
 --    La contraseña NUNCA se guarda en texto plano: se guarda el hash
 --    generado en Python con werkzeug.security.generate_password_hash
 --    (algoritmo scrypt + sal aleatoria).
@@ -104,7 +104,7 @@ INSERT INTO Matricula (IdEstudiante, IdCurso, FechaMatricula, NotaFinal) VALUES
  (4, 1, '2026-07-28', 2.1), (4, 2, '2026-07-28', 2.8), (4, 3, '2026-07-28', 3.0),
  (5, 1, '2026-07-28', NULL);
 
--- Usuarios de la aplicación (hash scrypt, NO contraseñas en claro).
+-- Usuarios de la web (hash scrypt, NO contraseñas en claro).
 --   admin  -> contraseña de prueba: Admin2026*
 --   lgomez -> contraseña de prueba: Laura2026*
 -- Para crear usuarios nuevos use la opción "Crear usuario" de actividad2_crud.py.

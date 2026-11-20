@@ -16,11 +16,11 @@ python/
   actividad2_crud.py           Act. 2 – CRUD parametrizado con menú en consola
   actividad3_procedimientos.py Act. 3 – callproc() y parámetros OUT
   actividad4_mongodb.py        Act. 4 – CRUD con pymongo
-  app.py + templates/          Act. 5 – aplicación web Flask con login (MySQL + MongoDB)
+  app.py + templates/          Act. 5 – página web Flask con login (MySQL + MongoDB)
   demo_inyeccion.py            Demo: consulta concatenada vs parametrizada
 ```
 
-## La aplicación web (Actividad 5)
+## La web (Actividad 5)
 
 Una sola web usa las dos bases de datos:
 
@@ -62,7 +62,7 @@ Seguridad: consultas parametrizadas, contraseñas con hash, token CSRF en todos 
    python actividad4_mongodb.py
    python app.py          # abrir http://127.0.0.1:5000
    ```
-   Usuarios de prueba de la app: `admin / Admin2026*` (administrador) y `lgomez / Laura2026*` (estudiante).
+   Usuarios de prueba de la web: `admin / Admin2026*` (administrador) y `lgomez / Laura2026*` (estudiante).
 6. **Verificar.** Ejecute `sql/consultas_verificacion.sql` en Workbench.
 
 ### Alternativa rápida con Docker
