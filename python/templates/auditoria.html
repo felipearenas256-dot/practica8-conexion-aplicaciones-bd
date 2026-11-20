@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block titulo %}Auditoría{% endblock %}
+{% block contenido %}
+<div class="encabezado">
+  <div>
+    <h1>Auditoría de matrículas</h1>
+    <p>Tabla <code>Auditoria_Matricula</code>. La llena sola el trigger <code>trg_matricula_auditoria</code> (AFTER INSERT); la aplicación no escribe aquí.</p>
+  </div>
+  <span class="etiqueta mysql">MySQL · trigger</span>
+</div>
+
+<div class="tarjeta">
+  <div class="tabla-scroll">
+  <table>
+    <tr><th>#</th><th>Fecha y hora</th><th>Acción</th><th>Matrícula</th><th>Estudiante</th><th>Curso</th><th>Usuario de BD</th></tr>
+    {% for a in filas %}
+    <tr>
+      <td>{{ a.IdAuditoria }}</td>
+      <td>{{ a.FechaHora | fecha }}</td>
+      <td><span class="estado APROBADO">{{ a.Accion }}</span></td>
+      <td>{{ a.IdMatricula }}</td>
+      <td>{{ a.Estudiante }}</td>
+      <td>{{ a.Curso }}</td>
+      <td><code>{{ a.Usuario }}</code></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="vacio">Sin registros de auditoría.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+</div>
+{% endblock %}

@@ -11,7 +11,7 @@ sql/
   consultas_verificacion.sql   Consultas para comprobar que todo funciona
 python/
   conexion.py                  Configuración (.env), pool de conexiones MySQL, conexión MongoDB
-  dao.py                       Patrón DAO: EstudianteDAO, CursoDAO, MatriculaDAO, UsuarioDAO, LogDAO, PreferenciaDAO
+  dao.py                       Patrón DAO: Estudiante, Curso, Matricula, Usuario (MySQL) · Log, Preferencia, Perfil (MongoDB)
   actividad1_conexion.py       Act. 1 – conexión básica + SELECT + try/except
   actividad2_crud.py           Act. 2 – CRUD parametrizado con menú en consola
   actividad3_procedimientos.py Act. 3 – callproc() y parámetros OUT
@@ -24,15 +24,23 @@ python/
 
 Una sola web usa las dos bases de datos:
 
-| Parte de la web | Base | Dónde se guarda |
+| Parte de la web | Base | Dónde se guarda / qué usa |
 |---|---|---|
-| Inicio de sesión y roles | MySQL | tabla `Usuario` (contraseña con hash scrypt) |
-| Estudiantes, cursos, matrículas, notas | MySQL | tablas `Estudiante`, `Curso`, `Matricula` + SP y triggers |
+| Inicio de sesión, roles, cambio de contraseña, activar/desactivar cuentas | MySQL | tabla `Usuario` (contraseña con hash scrypt) |
+| Estudiantes: buscar, crear, editar, eliminar, exportar CSV | MySQL | tabla `Estudiante`, función `fn_calcular_edad` |
+| Matricular, poner nota, retirar | MySQL | `sp_registrar_matricula`, triggers de validación, `sp_actualizar_estados_curso` y `sp_clasificar_estudiante` (recalculan estado y promedio) |
+| Cursos con estadísticas y detalle | MySQL | `LEFT JOIN + GROUP BY` y `sp_resumen_curso` (parámetros OUT + result set) |
+| Auditoría de matrículas | MySQL | tabla `Auditoria_Matricula` (la llena el trigger) |
 | Perfil del estudiante (intereses, semillero, GitHub) | MongoDB | colección `estudiantes_perfil` |
-| Registro de actividad (logins, cambios) | MongoDB | colección `logs` |
+| Registro de actividad con filtros y totales por acción | MongoDB | colección `logs` (`find` + `aggregate`) |
+| Bloqueo tras 5 intentos fallidos de login en 10 minutos | MongoDB | se cuentan los `LOGIN_FALLIDO` en `logs` |
 | Preferencias (tema claro/oscuro) | MongoDB | colección `preferencias` |
 
-El administrador ve un panel con los conteos de las dos bases. Si MongoDB se apaga, la parte académica (MySQL) sigue funcionando.
+Pantallas: **Panel** (cifras de las dos bases, estados académicos, acciones frecuentes, actividad reciente), **Estudiantes**, **ficha del estudiante** (une MySQL y MongoDB), **Cursos**, **Auditoría**, **Logs** y **Mi cuenta**. El estudiante solo ve su ficha y edita su propio perfil.
+
+Seguridad: consultas parametrizadas, contraseñas con hash, token CSRF en todos los formularios, cookie de sesión `HttpOnly`/`SameSite`, control de rol por ruta y bloqueo por fuerza bruta. Si MongoDB se apaga, la parte académica (MySQL) sigue funcionando; si MySQL se apaga, la web muestra un aviso en vez de un error.
+
+> Los datos de prueba se cargan con `Promedio = NULL` (para la Actividad 3). En el panel, el botón **Recalcular promedios** ejecuta los SP sobre toda la base.
 
 ## Manual de instalación
 

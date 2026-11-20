@@ -6,7 +6,8 @@ Cada clase concentra TODO el SQL de una tabla. El resto de la aplicación
 y nunca escribe SQL. Todas las consultas son PARAMETRIZADAS (%s + tupla):
 el conector envía los datos separados del SQL, así se evita la inyección.
 """
-from datetime import datetime
+import warnings
+from datetime import datetime, timedelta
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -18,12 +19,31 @@ from conexion import base_mongo, conexion_mysql
 # ======================================================================
 class EstudianteDAO:
     @staticmethod
-    def listar():
+    def listar(texto=None):
+        """Lista todos o filtra por nombre, apellido o correo (búsqueda parametrizada)."""
+        sql = (
+            "SELECT IdEstudiante, Nombre, Apellido, FechaNacimiento, Email, Promedio, EstadoAcademico, "
+            "fn_calcular_edad(FechaNacimiento) AS Edad FROM Estudiante"
+        )
+        params = ()
+        if texto:
+            sql += " WHERE CONCAT(Nombre, ' ', Apellido) LIKE %s OR Email LIKE %s"
+            params = (f"%{texto}%", f"%{texto}%")
+        with conexion_mysql() as cnx:
+            cur = cnx.cursor(dictionary=True)
+            cur.execute(sql + " ORDER BY IdEstudiante", params)
+            filas = cur.fetchall()
+            cur.close()
+            return filas
+
+    @staticmethod
+    def por_estado():
+        """Cuántos estudiantes hay en cada estado académico (para el panel)."""
         with conexion_mysql() as cnx:
             cur = cnx.cursor(dictionary=True)
             cur.execute(
-                "SELECT IdEstudiante, Nombre, Apellido, FechaNacimiento, Email, "
-                "Promedio, EstadoAcademico FROM Estudiante ORDER BY IdEstudiante"
+                "SELECT EstadoAcademico AS estado, COUNT(*) AS total FROM Estudiante "
+                "GROUP BY EstadoAcademico ORDER BY total DESC"
             )
             filas = cur.fetchall()
             cur.close()
@@ -109,6 +129,59 @@ class CursoDAO:
             cur.close()
             return filas
 
+    @staticmethod
+    def listar_con_estadisticas():
+        """LEFT JOIN + GROUP BY: cada curso con inscritos, promedio y aprobados."""
+        with conexion_mysql() as cnx:
+            cur = cnx.cursor(dictionary=True)
+            cur.execute(
+                "SELECT c.IdCurso, c.Nombre, c.Creditos, COUNT(m.IdMatricula) AS Inscritos, "
+                "ROUND(AVG(m.NotaFinal), 2) AS Promedio, "
+                "COALESCE(SUM(m.NotaFinal >= 3.0), 0) AS Aprobados "
+                "FROM Curso c LEFT JOIN Matricula m ON m.IdCurso = c.IdCurso "
+                "GROUP BY c.IdCurso, c.Nombre, c.Creditos ORDER BY c.IdCurso"
+            )
+            filas = cur.fetchall()
+            cur.close()
+            return filas
+
+    @staticmethod
+    def buscar_por_id(id_curso):
+        with conexion_mysql() as cnx:
+            cur = cnx.cursor(dictionary=True)
+            cur.execute("SELECT IdCurso, Nombre, Creditos FROM Curso WHERE IdCurso = %s", (id_curso,))
+            fila = cur.fetchone()
+            cur.close()
+            return fila
+
+    @staticmethod
+    def insertar(nombre, creditos):
+        with conexion_mysql() as cnx:
+            cur = cnx.cursor()
+            cur.execute("INSERT INTO Curso (Nombre, Creditos) VALUES (%s, %s)", (nombre, creditos))
+            cnx.commit()
+            nuevo_id = cur.lastrowid
+            cur.close()
+            return nuevo_id
+
+    @staticmethod
+    def resumen(id_curso):
+        """
+        Llama a sp_resumen_curso: 3 parámetros OUT + un result set con los estudiantes.
+        Devuelve (dict con los OUT, lista de estudiantes).
+        """
+        with conexion_mysql() as cnx:
+            cur = cnx.cursor()
+            res = cur.callproc("sp_resumen_curso", (id_curso, 0, (0, "DECIMAL(3,2)"), 0))
+            filas = []
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+                for resultado in cur.stored_results():
+                    columnas = [c[0] for c in resultado.description]
+                    filas += [dict(zip(columnas, f)) for f in resultado.fetchall()]
+            cur.close()
+        return {"inscritos": res[1], "promedio": res[2], "aprobados": res[3] or 0}, filas
+
 
 class MatriculaDAO:
     @staticmethod
@@ -116,7 +189,7 @@ class MatriculaDAO:
         with conexion_mysql() as cnx:
             cur = cnx.cursor(dictionary=True)
             cur.execute(
-                "SELECT m.IdMatricula, c.Nombre AS Curso, c.Creditos, m.FechaMatricula, "
+                "SELECT m.IdMatricula, m.IdCurso, c.Nombre AS Curso, c.Creditos, m.FechaMatricula, "
                 "m.NotaFinal, m.Estado "
                 "FROM Matricula m JOIN Curso c ON c.IdCurso = m.IdCurso "
                 "WHERE m.IdEstudiante = %s ORDER BY m.IdMatricula",
@@ -138,15 +211,100 @@ class MatriculaDAO:
 
     @staticmethod
     def poner_nota(id_matricula, nota):
+        """
+        Guarda la nota (el trigger valida 0.0–5.0) y luego reutiliza los SP de la
+        Práctica 5 para que el estado de la matrícula y el promedio del estudiante
+        queden al día. Devuelve las filas encontradas (0 = la matrícula no existe).
+        """
         with conexion_mysql() as cnx:
             cur = cnx.cursor()
+            try:
+                cnx.start_transaction()
+                cur.execute(
+                    "UPDATE Matricula SET NotaFinal = %s WHERE IdMatricula = %s", (nota, id_matricula)
+                )
+                afectadas = cur.rowcount
+                if afectadas:
+                    cur.execute(
+                        "SELECT IdEstudiante, IdCurso FROM Matricula WHERE IdMatricula = %s", (id_matricula,)
+                    )
+                    id_est, id_curso = cur.fetchone()
+                    cur.callproc("sp_actualizar_estados_curso", (id_curso, 0))
+                    cur.callproc("sp_clasificar_estudiante", (id_est, (0, "DECIMAL(3,2)"), (0, "CHAR")))
+                cnx.commit()
+                return afectadas
+            except Exception:
+                cnx.rollback()
+                raise
+            finally:
+                cur.close()
+
+    @staticmethod
+    def recalcular_todo():
+        """
+        Ejecuta los SP de la Práctica 5 sobre toda la base:
+        sp_actualizar_estados_curso (cursor) por cada curso y
+        sp_clasificar_estudiante por cada estudiante. Devuelve (matrículas, estudiantes).
+        """
+        with conexion_mysql() as cnx:
+            cur = cnx.cursor()
+            try:
+                cnx.start_transaction()
+                cur.execute("SELECT IdCurso FROM Curso")
+                cursos = [f[0] for f in cur.fetchall()]
+                cur.execute("SELECT IdEstudiante FROM Estudiante")
+                estudiantes = [f[0] for f in cur.fetchall()]
+                procesadas = sum(cur.callproc("sp_actualizar_estados_curso", (c, 0))[1] for c in cursos)
+                for e in estudiantes:
+                    cur.callproc("sp_clasificar_estudiante", (e, (0, "DECIMAL(3,2)"), (0, "CHAR")))
+                cnx.commit()
+                return procesadas, len(estudiantes)
+            except Exception:
+                cnx.rollback()
+                raise
+            finally:
+                cur.close()
+
+    @staticmethod
+    def retirar(id_matricula):
+        """Elimina una matrícula y recalcula el promedio del estudiante (una transacción)."""
+        with conexion_mysql() as cnx:
+            cur = cnx.cursor()
+            try:
+                cnx.start_transaction()
+                cur.execute("SELECT IdEstudiante FROM Matricula WHERE IdMatricula = %s", (id_matricula,))
+                fila = cur.fetchone()
+                if not fila:
+                    cnx.rollback()
+                    return None
+                cur.execute("DELETE FROM Matricula WHERE IdMatricula = %s", (id_matricula,))
+                cur.callproc("sp_clasificar_estudiante", (fila[0], (0, "DECIMAL(3,2)"), (0, "CHAR")))
+                cnx.commit()
+                return fila[0]
+            except Exception:
+                cnx.rollback()
+                raise
+            finally:
+                cur.close()
+
+    @staticmethod
+    def auditoria(limite=100):
+        """Tabla Auditoria_Matricula (la llena el trigger AFTER INSERT)."""
+        with conexion_mysql() as cnx:
+            cur = cnx.cursor(dictionary=True)
             cur.execute(
-                "UPDATE Matricula SET NotaFinal = %s WHERE IdMatricula = %s", (nota, id_matricula)
+                "SELECT a.IdAuditoria, a.IdMatricula, a.Accion, a.Usuario, a.FechaHora, "
+                "COALESCE(fn_formatear_nombre(e.Nombre, e.Apellido), CONCAT('Estudiante ', a.IdEstudiante)) AS Estudiante, "
+                "COALESCE(c.Nombre, CONCAT('Curso ', a.IdCurso)) AS Curso "
+                "FROM Auditoria_Matricula a "
+                "LEFT JOIN Estudiante e ON e.IdEstudiante = a.IdEstudiante "
+                "LEFT JOIN Curso c ON c.IdCurso = a.IdCurso "
+                "ORDER BY a.IdAuditoria DESC LIMIT %s",
+                (limite,),
             )
-            cnx.commit()
-            afectadas = cur.rowcount
+            filas = cur.fetchall()
             cur.close()
-            return afectadas
+            return filas
 
 
 class UsuarioDAO:
@@ -181,6 +339,41 @@ class UsuarioDAO:
             return usuario
         return None
 
+    @staticmethod
+    def por_estudiante(id_estudiante):
+        with conexion_mysql() as cnx:
+            cur = cnx.cursor(dictionary=True)
+            cur.execute(
+                "SELECT IdUsuario, Username, Rol, Activo, FechaCreacion FROM Usuario WHERE IdEstudiante = %s",
+                (id_estudiante,),
+            )
+            fila = cur.fetchone()
+            cur.close()
+            return fila
+
+    @staticmethod
+    def cambiar_estado(id_usuario, activo):
+        with conexion_mysql() as cnx:
+            cur = cnx.cursor()
+            cur.execute("UPDATE Usuario SET Activo = %s WHERE IdUsuario = %s", (activo, id_usuario))
+            cnx.commit()
+            cur.close()
+
+    @staticmethod
+    def cambiar_password(username, actual, nueva):
+        """Comprueba la contraseña actual y guarda el hash de la nueva. True si cambió."""
+        if not UsuarioDAO.autenticar(username, actual):
+            return False
+        with conexion_mysql() as cnx:
+            cur = cnx.cursor()
+            cur.execute(
+                "UPDATE Usuario SET PasswordHash = %s WHERE Username = %s",
+                (generate_password_hash(nueva), username),
+            )
+            cnx.commit()
+            cur.close()
+        return True
+
 
 # ======================================================================
 # MongoDB – datos no estructurados (logs y preferencias)
@@ -196,9 +389,38 @@ class LogDAO:
         return base_mongo().logs.insert_one(doc).inserted_id
 
     @staticmethod
-    def ultimos(limite=20, usuario=None):
-        filtro = {"usuario": usuario} if usuario else {}
+    def ultimos(limite=20, usuario=None, accion=None):
+        filtro = {}
+        if usuario:
+            filtro["usuario"] = usuario
+        if accion:
+            filtro["accion"] = accion
         return list(base_mongo().logs.find(filtro, {"_id": 0}).sort("fecha", -1).limit(limite))
+
+    @staticmethod
+    def conteo_por_accion():
+        """Pipeline de agregación: cuántas veces ocurrió cada acción."""
+        return list(base_mongo().logs.aggregate([
+            {"$group": {"_id": "$accion", "total": {"$sum": 1}}},
+            {"$sort": {"total": -1}},
+        ]))
+
+    @staticmethod
+    def usuarios():
+        return sorted(u for u in base_mongo().logs.distinct("usuario") if u)
+
+    @staticmethod
+    def intentos_fallidos(usuario, minutos=10):
+        """
+        Intentos fallidos de login en los últimos N minutos, contados desde el
+        último ingreso correcto. Se usa para frenar ataques de fuerza bruta.
+        """
+        logs = base_mongo().logs
+        desde = datetime.now() - timedelta(minutes=minutos)
+        ultimo_ok = logs.find_one({"usuario": usuario, "accion": "LOGIN_OK"}, sort=[("fecha", -1)])
+        if ultimo_ok and ultimo_ok["fecha"] > desde:
+            desde = ultimo_ok["fecha"]
+        return logs.count_documents({"usuario": usuario, "accion": "LOGIN_FALLIDO", "fecha": {"$gt": desde}})
 
 
 class PreferenciaDAO:

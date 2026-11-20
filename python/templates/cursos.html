@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block titulo %}Cursos{% endblock %}
+{% block contenido %}
+<div class="encabezado">
+  <div>
+    <h1>Cursos</h1>
+    <p>Estadísticas con <code>LEFT JOIN</code> + <code>GROUP BY</code> sobre <code>Curso</code> y <code>Matricula</code>.</p>
+  </div>
+</div>
+
+<div class="tarjeta">
+  <div class="tabla-scroll">
+  <table>
+    <tr><th>ID</th><th>Curso</th><th class="num">Créditos</th><th class="num">Inscritos</th><th class="num">Promedio</th><th>Aprobación</th></tr>
+    {% for c in cursos %}
+    <tr>
+      <td>{{ c.IdCurso }}</td>
+      <td><a href="{{ url_for('detalle_curso', id_curso=c.IdCurso) }}">{{ c.Nombre }}</a></td>
+      <td class="num">{{ c.Creditos }}</td>
+      <td class="num">{{ c.Inscritos }}</td>
+      <td class="num">{{ c.Promedio if c.Promedio is not none else '—' }}</td>
+      <td style="min-width:140px">
+        {% if c.Inscritos %}
+        {% set pct = (c.Aprobados / c.Inscritos * 100) | round | int %}
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="progreso" style="flex:1;margin:0"><div style="width:{{ pct }}%"></div></div>
+          <small class="num">{{ pct }}%</small>
+        </div>
+        {% else %}<small style="color:var(--tenue)">Sin inscritos</small>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
+</div>
+
+<div class="tarjeta" id="nuevo" style="max-width:560px">
+  <h3>Nuevo curso</h3>
+  <form method="post" action="{{ url_for('nuevo_curso') }}">
+    {{ csrf() }}
+    <div class="campos">
+      <label>Nombre<input name="nombre" required maxlength="80"></label>
+      <label>Créditos<input name="creditos" type="number" min="1" max="10" value="3" required></label>
+    </div>
+    <div class="acciones"><button class="btn-primario">Crear curso</button></div>
+  </form>
+</div>
+{% endblock %}

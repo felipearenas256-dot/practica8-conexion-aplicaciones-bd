@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block titulo %}Mi cuenta{% endblock %}
+{% block contenido %}
+<div class="encabezado">
+  <div>
+    <h1>Mi cuenta</h1>
+    <p>{{ session.usuario }} · {{ 'Administrador' if session.rol == 'ADMIN' else 'Estudiante' }}</p>
+  </div>
+</div>
+
+<div class="rejilla">
+  <div class="tarjeta">
+    <div class="tarjeta-cab"><h2>Cambiar contraseña</h2><span class="etiqueta mysql">MySQL · hash scrypt</span></div>
+    <form method="post" style="display:grid;gap:10px">
+      {{ csrf() }}
+      <label>Contraseña actual<input name="actual" type="password" required autocomplete="current-password"></label>
+      <label>Nueva contraseña (mínimo 8 caracteres)<input name="nueva" type="password" minlength="8" required autocomplete="new-password"></label>
+      <label>Repita la nueva contraseña<input name="confirmar" type="password" minlength="8" required autocomplete="new-password"></label>
+      <div><button class="btn-primario">Actualizar contraseña</button></div>
+    </form>
+  </div>
+
+  <div class="tarjeta">
+    <div class="tarjeta-cab"><h2>Mi actividad</h2><span class="etiqueta mongo">MongoDB · logs</span></div>
+    {% if actividad is none %}
+      <p class="nota-base">MongoDB no está disponible.</p>
+    {% else %}
+      <ul class="lista-actividad">
+        {% for l in actividad %}
+        <li><span>{{ l.accion }}</span><small>{{ l.fecha | fecha }}</small></li>
+        {% else %}
+        <li><span class="nota-base">Sin actividad.</span></li>
+        {% endfor %}
+      </ul>
+      {% if prefs %}
+      <details>
+        <summary>Mis preferencias guardadas en MongoDB</summary>
+        <pre class="json">{{ prefs | tojson(indent=2) }}</pre>
+      </details>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

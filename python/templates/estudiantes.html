@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block titulo %}Estudiantes{% endblock %}
+{% block contenido %}
+<div class="encabezado">
+  <div>
+    <h1>Estudiantes</h1>
+    <p>Tabla <code>Estudiante</code> en MySQL. La edad sale de la función <code>fn_calcular_edad</code>.</p>
+  </div>
+</div>
+
+<div class="tarjeta">
+  <div class="tarjeta-cab">
+    <form class="linea" method="get">
+      <input name="q" value="{{ q }}" placeholder="Buscar por nombre o correo" style="min-width:240px" aria-label="Buscar">
+      <button>Buscar</button>
+      {% if q %}<a href="{{ url_for('estudiantes') }}">Limpiar</a>{% endif %}
+    </form>
+    <a class="boton" href="{{ url_for('exportar_estudiantes', q=q or None) }}">Exportar CSV</a>
+  </div>
+  {% if q %}<p class="nota-base">{{ estudiantes | length }} resultado(s) para «{{ q }}» · consulta <code>LIKE %s</code> parametrizada</p>{% endif %}
+  <div class="tabla-scroll">
+  <table>
+    <tr><th>ID</th><th>Nombre</th><th>Correo</th><th class="num">Edad</th><th class="num">Promedio</th><th>Estado</th><th></th></tr>
+    {% for e in estudiantes %}
+    <tr>
+      <td>{{ e.IdEstudiante }}</td>
+      <td><a href="{{ url_for('detalle_estudiante', id_est=e.IdEstudiante) }}">{{ e.Nombre }} {{ e.Apellido }}</a></td>
+      <td>{{ e.Email }}</td>
+      <td class="num">{{ e.Edad }}</td>
+      <td class="num">{{ e.Promedio if e.Promedio is not none else '—' }}</td>
+      <td><span class="estado {{ e.EstadoAcademico }}">{{ e.EstadoAcademico }}</span></td>
+      <td style="text-align:right">
+        <form method="post" action="{{ url_for('eliminar_estudiante', id_est=e.IdEstudiante) }}"
+              onsubmit='return confirm({{ ("¿Eliminar a " ~ e.Nombre ~ " " ~ e.Apellido ~ "? Se borran sus matrículas (MySQL) y su perfil (MongoDB).") | tojson }})'>
+          {{ csrf() }}<button class="btn-peligro">Eliminar</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="vacio">No hay estudiantes{{ ' que coincidan' if q }}.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+</div>
+
+<div class="rejilla">
+  <div class="tarjeta" id="nuevo">
+    <h3>Nuevo estudiante</h3>
+    <form method="post" action="{{ url_for('nuevo_estudiante') }}">
+      {{ csrf() }}
+      <div class="campos">
+        <label>Nombre<input name="nombre" required maxlength="50"></label>
+        <label>Apellido<input name="apellido" required maxlength="50"></label>
+        <label>Fecha de nacimiento<input name="fecha" type="date" required></label>
+        <label>Correo<input name="email" type="email" placeholder="correo@umb.edu.co" required maxlength="100"></label>
+      </div>
+      <div class="acciones"><button class="btn-primario">Guardar</button></div>
+    </form>
+  </div>
+  <div class="tarjeta">
+    <h3>Matricular</h3>
+    <p class="nota-base">Usa el procedimiento <code>sp_registrar_matricula</code>: valida que no esté repetida y el trigger deja la auditoría.</p>
+    <form method="post" action="{{ url_for('nueva_matricula') }}">
+      {{ csrf() }}
+      <div class="campos">
+        <label>Estudiante
+          <select name="id_estudiante">
+            {% for e in todos %}<option value="{{ e.IdEstudiante }}">{{ e.IdEstudiante }} · {{ e.Nombre }} {{ e.Apellido }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>Curso
+          <select name="id_curso">
+            {% for c in cursos %}<option value="{{ c.IdCurso }}">{{ c.Nombre }} ({{ c.Creditos }} cr.)</option>{% endfor %}
+          </select>
+        </label>
+      </div>
+      <div class="acciones"><button class="btn-primario">Matricular</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}

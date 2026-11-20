@@ -1,55 +1,152 @@
 {% extends "base.html" %}
+{% block titulo %}{{ est.Nombre }} {{ est.Apellido }}{% endblock %}
 {% block contenido %}
-<div class="tarjeta">
-  <h2>{{ est.Nombre }} {{ est.Apellido }}</h2>
-  <p>{{ est.Email }} · Promedio: <strong>{{ est.Promedio if est.Promedio is not none else '—' }}</strong> · Estado: {{ est.EstadoAcademico }}</p>
+<div class="encabezado">
+  <div>
+    {% if admin %}<div class="migas"><a href="{{ url_for('estudiantes') }}">Estudiantes</a> / {{ est.IdEstudiante }}</div>{% endif %}
+    <h1>{{ est.Nombre }} {{ est.Apellido }}</h1>
+    <p>{{ est.Email }} · fecha de nacimiento {{ est.FechaNacimiento | fecha(false) }}</p>
+  </div>
+  <span class="estado {{ est.EstadoAcademico }}" style="font-size:14px;padding:4px 12px">{{ est.EstadoAcademico }}</span>
+</div>
+
+<div class="cifras sueltas separa">
+  <div class="cifra"><strong>{{ est.Promedio if est.Promedio is not none else '—' }}</strong><span>Promedio</span></div>
+  <div class="cifra"><strong>{{ progreso.cursos }}</strong><span>Cursos matriculados</span></div>
+  <div class="cifra"><strong>{{ progreso.aprobados }}</strong><span>Cursos aprobados</span></div>
+  <div class="cifra">
+    <strong>{{ progreso.creditos }}<small style="font-size:14px;color:var(--tenue)"> / {{ progreso.creditos_total }}</small></strong>
+    <span>Créditos aprobados</span>
+    <div class="progreso"><div style="width:{{ (progreso.creditos / progreso.creditos_total * 100) | round if progreso.creditos_total else 0 }}%"></div></div>
+  </div>
 </div>
 
 <div class="tarjeta">
-  <h3>Matrículas <span class="etiqueta mysql">MySQL · tablas Matricula + Curso</span></h3>
+  <div class="tarjeta-cab">
+    <h2>Matrículas</h2>
+    <span class="etiqueta mysql">MySQL · Matricula + Curso</span>
+  </div>
+  {% if admin %}<p class="nota-base">Al guardar una nota, el trigger valida el rango 0.0–5.0 y los SP recalculan el estado del curso y el promedio.</p>{% endif %}
   <div class="tabla-scroll">
   <table>
-    <tr><th>#</th><th>Curso</th><th>Créditos</th><th>Fecha</th><th>Nota</th><th>Estado</th>{% if admin %}<th>Registrar nota</th>{% endif %}</tr>
+    <tr><th>#</th><th>Curso</th><th class="num">Créditos</th><th>Fecha</th><th class="num">Nota</th><th>Estado</th>{% if admin %}<th>Nota final</th><th></th>{% endif %}</tr>
     {% for m in matriculas %}
     <tr>
-      <td>{{ m.IdMatricula }}</td><td>{{ m.Curso }}</td><td>{{ m.Creditos }}</td>
-      <td>{{ m.FechaMatricula }}</td><td>{{ m.NotaFinal if m.NotaFinal is not none else '—' }}</td><td>{{ m.Estado }}</td>
+      <td>{{ m.IdMatricula }}</td><td>{{ m.Curso }}</td><td class="num">{{ m.Creditos }}</td>
+      <td>{{ m.FechaMatricula | fecha(false) }}</td>
+      <td class="num"><b>{{ m.NotaFinal if m.NotaFinal is not none else '—' }}</b></td>
+      <td><span class="estado {{ m.Estado }}">{{ m.Estado }}</span></td>
       {% if admin %}
       <td>
         <form class="linea" method="post" action="{{ url_for('poner_nota', id_mat=m.IdMatricula) }}">
-          <input name="nota" size="4" placeholder="0.0–5.0" required>
+          {{ csrf() }}
+          <input name="nota" inputmode="decimal" style="width:70px" placeholder="0.0–5.0" required
+                 value="{{ m.NotaFinal if m.NotaFinal is not none else '' }}" aria-label="Nota">
           <button>Guardar</button>
+        </form>
+      </td>
+      <td>
+        <form method="post" action="{{ url_for('retirar_matricula', id_mat=m.IdMatricula) }}"
+              onsubmit='return confirm({{ ("¿Retirar a " ~ est.Nombre ~ " de " ~ m.Curso ~ "?") | tojson }})'>
+          {{ csrf() }}<button class="btn-texto btn-peligro">Retirar</button>
         </form>
       </td>
       {% endif %}
     </tr>
     {% else %}
-    <tr><td colspan="7">Sin matrículas.</td></tr>
+    <tr><td colspan="8" class="vacio">Sin matrículas.</td></tr>
     {% endfor %}
   </table>
   </div>
+  {% if admin and cursos_libres %}
+  <form class="linea" method="post" action="{{ url_for('nueva_matricula') }}" style="margin-top:14px">
+    {{ csrf() }}
+    <input type="hidden" name="id_estudiante" value="{{ est.IdEstudiante }}">
+    <select name="id_curso" aria-label="Curso">
+      {% for c in cursos_libres %}<option value="{{ c.IdCurso }}">{{ c.Nombre }} ({{ c.Creditos }} cr.)</option>{% endfor %}
+    </select>
+    <button class="btn-primario">Matricular en este curso</button>
+  </form>
+  {% endif %}
 </div>
 
-<div class="tarjeta">
-  <h3>Perfil <span class="etiqueta mongo">MongoDB · colección estudiantes_perfil</span></h3>
-  {% if not mongo_ok %}
-    <p class="flash error">MongoDB no está disponible en este momento.</p>
-  {% else %}
-    {% if perfil.intereses %}
-    <div class="chips">{% for i in perfil.intereses %}<span>{{ i }}</span>{% endfor %}</div>
+<div class="rejilla">
+  <div class="tarjeta">
+    <div class="tarjeta-cab">
+      <h2>Perfil</h2>
+      <span class="etiqueta mongo">MongoDB · estudiantes_perfil</span>
+    </div>
+    {% if not mongo_ok %}
+      <p class="flash error" style="margin:0">MongoDB no está disponible en este momento.</p>
     {% else %}
-    <p>Aún no tiene perfil. Complételo abajo.</p>
+      {% if perfil.intereses %}
+      <div class="chips">{% for i in perfil.intereses %}<span>{{ i }}</span>{% endfor %}</div>
+      {% else %}
+      <p class="nota-base">Aún no tiene perfil. Complételo abajo.</p>
+      {% endif %}
+      {% if perfil.semillero or perfil.redes %}
+      <p style="margin:0 0 12px;font-size:14px">
+        {% if perfil.semillero %}Semillero: <b>{{ perfil.semillero }}</b>{% endif %}
+        {% if perfil.semillero and perfil.redes %} · {% endif %}
+        {% if perfil.redes and perfil.redes.github %}GitHub: <a href="https://github.com/{{ perfil.redes.github }}" rel="noopener" target="_blank">@{{ perfil.redes.github }}</a>{% endif %}
+      </p>
+      {% endif %}
+      <form method="post" action="{{ url_for('guardar_perfil', id_est=est.IdEstudiante) }}" style="display:grid;gap:10px">
+        {{ csrf() }}
+        <label>Intereses (separados por coma)<input name="intereses" placeholder="bases de datos, IA" value="{{ (perfil.intereses or []) | join(', ') }}"></label>
+        <div class="campos">
+          <label>Semillero<input name="semillero" placeholder="Opcional" value="{{ perfil.semillero or '' }}"></label>
+          <label>Usuario de GitHub<input name="github" placeholder="Opcional" value="{{ perfil.redes.github if perfil.redes else '' }}"></label>
+        </div>
+        <div><button class="btn-primario">Guardar perfil</button></div>
+      </form>
+      {% if perfil %}
+      <details>
+        <summary>Ver el documento tal como está en MongoDB</summary>
+        <pre class="json">{{ perfil | tojson(indent=2) }}</pre>
+      </details>
+      {% endif %}
     {% endif %}
-    <form method="post" action="{{ url_for('guardar_perfil', id_est=est.IdEstudiante) }}" style="display:grid;gap:8px;max-width:520px">
-      <input name="intereses" placeholder="Intereses separados por coma (ej. bases de datos, IA)" value="{{ (perfil.intereses or []) | join(', ') }}">
-      <input name="semillero" placeholder="Semillero (opcional)" value="{{ perfil.semillero or '' }}">
-      <input name="github" placeholder="Usuario de GitHub (opcional)" value="{{ perfil.redes.github if perfil.redes else '' }}">
-      <div><button class="primario">Guardar perfil</button></div>
-    </form>
-    {% if perfil %}
-    <p class="nota-base">Documento tal como está guardado en MongoDB (cada estudiante puede tener campos distintos):</p>
-    <pre class="json">{{ perfil | tojson(indent=2) }}</pre>
-    {% endif %}
+  </div>
+
+  {% if admin %}
+  <div>
+    <div class="tarjeta">
+      <div class="tarjeta-cab"><h2>Datos personales</h2><span class="etiqueta mysql">UPDATE parametrizado</span></div>
+      <form method="post" action="{{ url_for('editar_estudiante', id_est=est.IdEstudiante) }}">
+        {{ csrf() }}
+        <div class="campos">
+          <label>Nombre<input name="nombre" value="{{ est.Nombre }}" required maxlength="50"></label>
+          <label>Apellido<input name="apellido" value="{{ est.Apellido }}" required maxlength="50"></label>
+          <label>Fecha de nacimiento<input name="fecha" type="date" value="{{ est.FechaNacimiento.isoformat() }}" required></label>
+          <label>Correo<input name="email" type="email" value="{{ est.Email or '' }}" required maxlength="100"></label>
+        </div>
+        <div class="acciones"><button class="btn-primario">Guardar cambios</button></div>
+      </form>
+    </div>
+    <div class="tarjeta">
+      <div class="tarjeta-cab"><h2>Acceso a la web</h2><span class="etiqueta mysql">tabla Usuario</span></div>
+      {% if cuenta_usuario %}
+        <p style="margin:0 0 12px">Usuario <b>{{ cuenta_usuario.Username }}</b> · creado el {{ cuenta_usuario.FechaCreacion | fecha(false) }} ·
+          {% if cuenta_usuario.Activo %}<span class="estado APROBADO">ACTIVA</span>{% else %}<span class="estado REPROBADO">DESACTIVADA</span>{% endif %}</p>
+        <form method="post" action="{{ url_for('cambiar_estado_cuenta', id_usuario=cuenta_usuario.IdUsuario) }}">
+          {{ csrf() }}
+          <input type="hidden" name="activo" value="{{ '0' if cuenta_usuario.Activo else '1' }}">
+          <button class="{{ 'btn-peligro' if cuenta_usuario.Activo }}">{{ 'Desactivar cuenta' if cuenta_usuario.Activo else 'Activar cuenta' }}</button>
+        </form>
+      {% else %}
+        <p class="nota-base">No tiene cuenta. Créela para que pueda ver sus notas y editar su perfil. La contraseña se guarda como hash.</p>
+        <form method="post" action="{{ url_for('crear_cuenta', id_est=est.IdEstudiante) }}">
+          {{ csrf() }}
+          <div class="campos">
+            <label>Usuario<input name="username" required minlength="3" maxlength="30" value="{{ (est.Nombre[:1] ~ est.Apellido.split()[0]) | lower }}"></label>
+            <label>Contraseña inicial<input name="password" type="password" required minlength="8"></label>
+          </div>
+          <div class="acciones"><button class="btn-primario">Crear cuenta</button></div>
+        </form>
+      {% endif %}
+    </div>
+  </div>
   {% endif %}
 </div>
 {% endblock %}

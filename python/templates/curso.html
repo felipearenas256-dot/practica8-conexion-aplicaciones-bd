@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block titulo %}{{ curso.Nombre }}{% endblock %}
+{% block contenido %}
+<div class="encabezado">
+  <div>
+    <div class="migas"><a href="{{ url_for('cursos') }}">Cursos</a> / {{ curso.IdCurso }}</div>
+    <h1>{{ curso.Nombre }}</h1>
+    <p>{{ curso.Creditos }} créditos · datos de <code>CALL sp_resumen_curso({{ curso.IdCurso }}, @inscritos, @promedio, @aprobados)</code></p>
+  </div>
+</div>
+
+<div class="cifras sueltas separa">
+  <div class="cifra"><strong>{{ resumen.inscritos }}</strong><span>Inscritos (OUT)</span></div>
+  <div class="cifra"><strong>{{ resumen.promedio if resumen.promedio is not none else '—' }}</strong><span>Promedio (OUT)</span></div>
+  <div class="cifra"><strong>{{ resumen.aprobados }}</strong><span>Aprobados (OUT)</span></div>
+</div>
+
+<div class="tarjeta">
+  <div class="tarjeta-cab"><h2>Estudiantes del curso</h2><span class="etiqueta mysql">result set del SP</span></div>
+  <div class="tabla-scroll">
+  <table>
+    <tr><th>ID</th><th>Estudiante</th><th class="num">Nota</th><th>Estado</th></tr>
+    {% for e in estudiantes %}
+    <tr>
+      <td>{{ e.IdEstudiante }}</td>
+      <td><a href="{{ url_for('detalle_estudiante', id_est=e.IdEstudiante) }}">{{ e.Estudiante }}</a></td>
+      <td class="num">{{ e.NotaFinal if e.NotaFinal is not none else '—' }}</td>
+      <td><span class="estado {{ e.Estado }}">{{ e.Estado }}</span></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="vacio">Nadie se ha matriculado en este curso.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+</div>
+{% endblock %}

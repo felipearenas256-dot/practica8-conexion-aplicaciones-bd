@@ -1,14 +1,53 @@
 {% extends "base.html" %}
+{% block titulo %}Logs{% endblock %}
 {% block contenido %}
+<div class="encabezado">
+  <div>
+    <h1>Logs de actividad</h1>
+    <p>Colección <code>logs</code> en MongoDB. Cada documento puede traer un <code>detalle</code> con campos distintos.</p>
+  </div>
+  <span class="etiqueta mongo">MongoDB · find + aggregate</span>
+</div>
+
+{% if conteo %}
 <div class="tarjeta">
-  <h2>Logs de actividad (MongoDB · colección logs)</h2>
+  <h3>Totales por acción <small style="font-weight:400;color:var(--tenue)">($group + $sort)</small></h3>
+  <div class="chips" style="margin:0">
+    {% for c in conteo %}
+    <a href="{{ url_for('ver_logs', accion=c._id, usuario=usuario) }}" class="etiqueta {{ 'mysql' if c._id == accion else 'mongo' }}">{{ c._id }} · {{ c.total }}</a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="tarjeta">
+  <div class="tarjeta-cab">
+    <form class="linea" method="get">
+      <select name="usuario" aria-label="Usuario">
+        <option value="">Todos los usuarios</option>
+        {% for u in usuarios %}<option {{ 'selected' if u == usuario }}>{{ u }}</option>{% endfor %}
+      </select>
+      <select name="accion" aria-label="Acción">
+        <option value="">Todas las acciones</option>
+        {% for c in conteo %}<option {{ 'selected' if c._id == accion }}>{{ c._id }}</option>{% endfor %}
+      </select>
+      <button>Filtrar</button>
+      {% if usuario or accion %}<a href="{{ url_for('ver_logs') }}">Limpiar</a>{% endif %}
+    </form>
+    <small style="color:var(--tenue)">Últimos {{ logs | length }} registros</small>
+  </div>
   <div class="tabla-scroll">
   <table>
     <tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Detalle</th></tr>
     {% for l in logs %}
-    <tr><td>{{ l.fecha.strftime('%Y-%m-%d %H:%M:%S') }}</td><td>{{ l.usuario }}</td><td>{{ l.accion }}</td><td>{{ l.detalle or '' }}</td></tr>
+    <tr>
+      <td style="white-space:nowrap">{{ l.fecha | fecha }}</td>
+      <td>{{ l.usuario }}</td>
+      <td><span class="estado {{ 'REPROBADO' if 'FALLIDO' in l.accion or 'ELIMINAR' in l.accion }}">{{ l.accion }}</span></td>
+      <td>{% if l.detalle %}<code style="font-size:12px">{{ l.detalle | tojson }}</code>{% endif %}</td>
+    </tr>
     {% else %}
-    <tr><td colspan="4">Sin registros.</td></tr>
+    <tr><td colspan="4" class="vacio">Sin registros.</td></tr>
     {% endfor %}
   </table>
   </div>

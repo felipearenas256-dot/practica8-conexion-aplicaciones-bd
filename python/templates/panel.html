@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block titulo %}Panel{% endblock %}
+{% block contenido %}
+<div class="encabezado">
+  <div>
+    <h1>Panel</h1>
+    <p>Resumen de las dos bases de datos que usa la aplicación.</p>
+  </div>
+  <div class="acciones" style="margin:0">
+    <form method="post" action="{{ url_for('recalcular') }}">
+      {{ csrf() }}
+      <button title="Ejecuta sp_actualizar_estados_curso y sp_clasificar_estudiante">Recalcular promedios</button>
+    </form>
+    <a class="boton" href="{{ url_for('estudiantes') }}#nuevo">+ Estudiante</a>
+    <a class="boton" href="{{ url_for('cursos') }}#nuevo">+ Curso</a>
+  </div>
+</div>
+
+<div class="rejilla separa">
+  <div class="tarjeta">
+    <div class="tarjeta-cab"><h2>MySQL</h2><span class="etiqueta mysql">relacional</span></div>
+    <p class="nota-base">Tablas con relaciones, transacciones, SP y triggers.</p>
+    <div class="cifras">
+      {% for nombre, valor in resumen.mysql.items() %}<div class="cifra"><strong>{{ valor }}</strong><span>{{ nombre }}</span></div>{% endfor %}
+    </div>
+  </div>
+  <div class="tarjeta">
+    <div class="tarjeta-cab"><h2>MongoDB</h2><span class="etiqueta mongo">documentos</span></div>
+    <p class="nota-base">Colecciones sin esquema fijo.</p>
+    {% if resumen.mongo %}
+    <div class="cifras">
+      {% for nombre, valor in resumen.mongo.items() %}<div class="cifra"><strong>{{ valor }}</strong><span>{{ nombre }}</span></div>{% endfor %}
+    </div>
+    {% else %}
+    <p class="flash error" style="margin:0">MongoDB no responde. La gestión académica (MySQL) sigue funcionando.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="rejilla separa">
+  <div class="tarjeta">
+    <div class="tarjeta-cab"><h3>Estado académico</h3><span class="etiqueta mysql">GROUP BY</span></div>
+    {% set maximo = (por_estado | map(attribute='total') | max) if por_estado else 1 %}
+    <div class="barras">
+      {% for f in por_estado %}
+      <div class="barra-fila">
+        <span class="estado {{ f.estado }}">{{ f.estado }}</span>
+        <div class="barra-pista"><div class="barra-valor" style="width:{{ (f.total / maximo * 100) | round }}%"></div></div>
+        <span class="num">{{ f.total }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="tarjeta">
+    <div class="tarjeta-cab"><h3>Acciones más frecuentes</h3><span class="etiqueta mongo">aggregate</span></div>
+    {% if por_accion %}
+    {% set maximo = por_accion[0].total %}
+    <div class="barras">
+      {% for a in por_accion %}
+      <div class="barra-fila">
+        <span style="font-size:12px;overflow:hidden;text-overflow:ellipsis">{{ a._id }}</span>
+        <div class="barra-pista"><div class="barra-valor mongo" style="width:{{ (a.total / maximo * 100) | round }}%"></div></div>
+        <span class="num">{{ a.total }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="nota-base">Sin datos de MongoDB.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="rejilla">
+  <div class="tarjeta">
+    <div class="tarjeta-cab"><h3>Cursos</h3><a href="{{ url_for('cursos') }}">Ver todos</a></div>
+    <div class="tabla-scroll">
+    <table>
+      <tr><th>Curso</th><th class="num">Inscritos</th><th class="num">Promedio</th><th class="num">Aprobados</th></tr>
+      {% for c in cursos %}
+      <tr>
+        <td><a href="{{ url_for('detalle_curso', id_curso=c.IdCurso) }}">{{ c.Nombre }}</a></td>
+        <td class="num">{{ c.Inscritos }}</td>
+        <td class="num">{{ c.Promedio if c.Promedio is not none else '—' }}</td>
+        <td class="num">{{ c.Aprobados }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    </div>
+  </div>
+  <div class="tarjeta">
+    <div class="tarjeta-cab"><h3>Actividad reciente</h3><a href="{{ url_for('ver_logs') }}">Ver logs</a></div>
+    {% if recientes %}
+    <ul class="lista-actividad">
+      {% for l in recientes %}
+      <li><span><b>{{ l.usuario }}</b> · {{ l.accion }}</span><small>{{ l.fecha | fecha }}</small></li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="nota-base">Sin actividad registrada o MongoDB no disponible.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

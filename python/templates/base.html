@@ -3,57 +3,165 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sistema Académico UMB</title>
+  <title>{% block titulo %}Sistema Académico{% endblock %} · UMB</title>
   <style>
-    :root { --rojo:#8b0000; --fondo:#f6f6f6; --tarjeta:#fff; --texto:#222; --borde:#ddd; }
-    [data-tema="oscuro"] { --fondo:#16181c; --tarjeta:#22252b; --texto:#e8e8e8; --borde:#3a3d44; }
+    :root {
+      --marca:#8b1a1a; --marca-suave:#f6e9e9; --fondo:#f4f5f7; --tarjeta:#fff; --texto:#1d2026;
+      --tenue:#626873; --borde:#e2e4e8; --linea:#eef0f2;
+      --mysql:#00546b; --mysql-suave:#e1eff4; --mongo:#1f6b3a; --mongo-suave:#e3f3e8;
+      --ok:#1f6b3a; --ok-suave:#e3f3e8; --mal:#a12020; --mal-suave:#fbe7e7; --aviso:#8a5a00; --aviso-suave:#fbf0d9;
+      --radio:10px; --sombra:0 1px 2px rgba(16,24,40,.06);
+    }
+    [data-tema="oscuro"] {
+      --marca:#e0605c; --marca-suave:#3a2224; --fondo:#14161a; --tarjeta:#1d2025; --texto:#e7e9ec;
+      --tenue:#9aa1ab; --borde:#30343b; --linea:#262a30;
+      --mysql:#7cc4d8; --mysql-suave:#173039; --mongo:#82cf9c; --mongo-suave:#18301f;
+      --ok:#82cf9c; --ok-suave:#18301f; --mal:#f08a8a; --mal-suave:#3a1f21; --aviso:#e8c172; --aviso-suave:#352b17;
+      --sombra:none;
+    }
     * { box-sizing:border-box; }
-    body { margin:0; font-family:system-ui, sans-serif; background:var(--fondo); color:var(--texto); }
-    header { background:var(--rojo); color:#fff; padding:12px 24px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
-    header a, header button { color:#fff; }
-    main { max-width:1000px; margin:24px auto; padding:0 16px; }
-    .tarjeta { background:var(--tarjeta); border:1px solid var(--borde); border-radius:8px; padding:16px 20px; margin-bottom:20px; }
+    body { margin:0; font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--fondo); color:var(--texto); }
+    a { color:var(--marca); text-decoration:none; } a:hover { text-decoration:underline; }
+    h1 { font-size:24px; margin:0; letter-spacing:-.01em; }
+    h2 { font-size:17px; margin:0 0 12px; }
+    h3 { font-size:15px; margin:0 0 10px; }
+
+    /* Barra superior */
+    .barra { background:var(--tarjeta); border-bottom:1px solid var(--borde); position:sticky; top:0; z-index:5; }
+    .barra-in { max-width:1120px; margin:0 auto; padding:0 16px; display:flex; align-items:center; gap:20px; min-height:58px; flex-wrap:wrap; }
+    .logo { display:flex; align-items:center; gap:10px; font-weight:700; color:var(--texto); }
+    .logo:hover { text-decoration:none; }
+    .logo i { width:30px; height:30px; border-radius:8px; background:var(--marca); color:#fff; display:grid; place-items:center; font-style:normal; font-size:13px; }
+    nav.menu { display:flex; gap:2px; flex:1; overflow-x:auto; }
+    nav.menu a { color:var(--tenue); padding:8px 12px; border-radius:8px; white-space:nowrap; font-size:14px; }
+    nav.menu a:hover { background:var(--fondo); text-decoration:none; color:var(--texto); }
+    nav.menu a.activo { background:var(--marca-suave); color:var(--marca); font-weight:600; }
+    .usuario { display:flex; align-items:center; gap:10px; font-size:14px; color:var(--tenue); }
+    .usuario form { margin:0; }
+    .avatar { width:30px; height:30px; border-radius:50%; background:var(--fondo); border:1px solid var(--borde); display:grid; place-items:center; font-weight:600; color:var(--texto); text-transform:uppercase; }
+
+    main { max-width:1120px; margin:24px auto 48px; padding:0 16px; }
+    .encabezado { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
+    .encabezado p { margin:4px 0 0; color:var(--tenue); }
+    .migas { font-size:13px; color:var(--tenue); margin-bottom:6px; }
+
+    .tarjeta { background:var(--tarjeta); border:1px solid var(--borde); border-radius:var(--radio); padding:18px 20px; margin-bottom:20px; box-shadow:var(--sombra); }
+    .tarjeta-cab { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+    .tarjeta-cab h2, .tarjeta-cab h3 { margin:0; }
+    .rejilla { display:grid; gap:20px; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); }
+    .rejilla > .tarjeta { margin-bottom:0; }
+    .separa { margin-bottom:20px; }
+
+    /* Cifras */
+    .cifras { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:12px; }
+    .cifra { background:var(--fondo); border-radius:8px; padding:10px 12px; }
+    .cifra strong { display:block; font-size:24px; line-height:1.2; font-variant-numeric:tabular-nums; }
+    .cifras.sueltas .cifra { background:var(--tarjeta); border:1px solid var(--borde); padding:14px 16px; }
+    .cifra span { font-size:13px; color:var(--tenue); }
+
+    /* Tablas */
+    .tabla-scroll { overflow-x:auto; margin:0 -20px; padding:0 20px; }
     table { width:100%; border-collapse:collapse; font-size:14px; }
-    th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--borde); }
-    input, select, button { font:inherit; padding:6px 8px; border:1px solid var(--borde); border-radius:6px; background:var(--tarjeta); color:var(--texto); }
-    button.primario { background:var(--rojo); color:#fff; border:none; cursor:pointer; }
-    .flash { padding:10px 14px; border-radius:6px; margin-bottom:12px; }
-    .ok { background:#e3f4e6; color:#1d5a2a; } .error { background:#fbe4e4; color:#8b0000; }
-    form.linea { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-    .tabla-scroll { overflow-x:auto; }
-    .bases { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px; }
-    .bases .tarjeta { margin-bottom:20px; }
-    .etiqueta { display:inline-block; font-size:12px; font-weight:600; padding:3px 8px; border-radius:999px; vertical-align:middle; }
-    .etiqueta.mysql { background:#e3edf7; color:#00546b; }
-    .etiqueta.mongo { background:#e3f4e6; color:#1d5a2a; }
-    .nota-base { margin:8px 0 12px; font-size:13px; opacity:.75; }
-    .cifras { display:flex; gap:24px; flex-wrap:wrap; }
-    .cifras div { display:flex; flex-direction:column; }
-    .cifras strong { font-size:26px; font-variant-numeric:tabular-nums; }
-    .cifras span { font-size:13px; opacity:.75; }
-    .chips { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; }
-    .chips span { background:var(--fondo); border:1px solid var(--borde); border-radius:999px; padding:2px 10px; font-size:13px; }
-    pre.json { background:var(--fondo); border:1px solid var(--borde); border-radius:6px; padding:10px; font-size:12px; overflow-x:auto; }
+    th { text-align:left; font-size:12px; font-weight:600; color:var(--tenue); text-transform:uppercase; letter-spacing:.03em; padding:8px; border-bottom:1px solid var(--borde); white-space:nowrap; }
+    td { padding:9px 8px; border-bottom:1px solid var(--linea); vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+    .vacio { text-align:center; color:var(--tenue); padding:24px; }
+
+    /* Formularios */
+    input, select, button, textarea { font:inherit; font-size:14px; padding:7px 10px; border:1px solid var(--borde); border-radius:8px; background:var(--tarjeta); color:var(--texto); }
+    input:focus, select:focus { outline:2px solid var(--marca); outline-offset:-1px; }
+    button { cursor:pointer; }
+    button:hover { border-color:var(--tenue); }
+    .btn-primario { background:var(--marca); color:#fff; border-color:var(--marca); font-weight:600; }
+    .btn-primario:hover { filter:brightness(1.08); border-color:var(--marca); }
+    .btn-peligro { color:var(--mal); }
+    .btn-peligro:hover { background:var(--mal-suave); border-color:var(--mal); }
+    .btn-texto { background:none; border:none; padding:4px 6px; color:var(--tenue); }
+    .btn-texto.btn-peligro { color:var(--mal); }
+    .btn-texto:hover { color:var(--texto); text-decoration:underline; }
+    a.boton { display:inline-block; padding:7px 12px; border:1px solid var(--borde); border-radius:8px; color:var(--texto); font-size:14px; background:var(--tarjeta); }
+    a.boton:hover { text-decoration:none; border-color:var(--tenue); }
+    form.linea { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:0; }
+    .campos { display:grid; gap:10px; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); }
+    label { display:grid; gap:4px; font-size:13px; color:var(--tenue); }
+    label input, label select { color:var(--texto); }
+    .acciones { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+
+    /* Etiquetas */
+    .etiqueta { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:600; padding:2px 9px; border-radius:999px; vertical-align:middle; white-space:nowrap; }
+    .etiqueta.mysql { background:var(--mysql-suave); color:var(--mysql); }
+    .etiqueta.mongo { background:var(--mongo-suave); color:var(--mongo); }
+    .estado { font-size:12px; font-weight:600; padding:2px 8px; border-radius:6px; white-space:nowrap; background:var(--fondo); color:var(--tenue); }
+    .estado.APROBADO, .estado.EXCELENTE, .estado.BUENO { background:var(--ok-suave); color:var(--ok); }
+    .estado.REPROBADO { background:var(--mal-suave); color:var(--mal); }
+    .estado.EN.CURSO { background:var(--aviso-suave); color:var(--aviso); }
+    .nota-base { margin:0 0 12px; font-size:13px; color:var(--tenue); }
+
+    /* Barras */
+    .barras { display:grid; gap:8px; }
+    .barra-fila { display:grid; grid-template-columns:110px 1fr 36px; gap:10px; align-items:center; font-size:13px; }
+    .barra-pista { height:10px; background:var(--fondo); border-radius:999px; overflow:hidden; }
+    .barra-valor { height:100%; background:var(--marca); border-radius:999px; }
+    .barra-valor.mongo { background:var(--mongo); }
+    .progreso { height:8px; background:var(--fondo); border-radius:999px; overflow:hidden; margin-top:6px; }
+    .progreso div { height:100%; background:var(--ok); }
+
+    .flash { padding:10px 14px; border-radius:8px; margin-bottom:14px; font-size:14px; border:1px solid transparent; }
+    .flash.ok { background:var(--ok-suave); color:var(--ok); border-color:color-mix(in srgb, var(--ok) 25%, transparent); }
+    .flash.error { background:var(--mal-suave); color:var(--mal); border-color:color-mix(in srgb, var(--mal) 25%, transparent); }
+    .chips { display:flex; gap:6px; flex-wrap:wrap; margin:4px 0 12px; }
+    .chips span { background:var(--mongo-suave); color:var(--mongo); border-radius:999px; padding:2px 10px; font-size:13px; }
+    pre.json { background:var(--fondo); border:1px solid var(--borde); border-radius:8px; padding:12px; font-size:12px; overflow-x:auto; margin:0; }
+    details summary { cursor:pointer; color:var(--tenue); font-size:13px; margin:8px 0; }
+    .lista-actividad { list-style:none; margin:0; padding:0; }
+    .lista-actividad li { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--linea); font-size:14px; }
+    .lista-actividad li:last-child { border-bottom:none; }
+    .lista-actividad small { color:var(--tenue); white-space:nowrap; }
+    code { font-size:13px; background:var(--fondo); padding:1px 5px; border-radius:4px; }
+
+    @media (max-width:640px) {
+      .barra-in { gap:8px; padding:8px 16px; }
+      nav.menu { order:3; flex-basis:100%; }
+      .usuario .nombre { display:none; }
+      h1 { font-size:21px; }
+    }
   </style>
 </head>
 <body>
-<header>
-  <strong>Sistema Académico UMB</strong>
-  {% if session.usuario %}
-  <span>
-    {{ session.usuario }} ({{ session.rol }}) ·
-    {% if session.rol == 'ADMIN' %}<a href="{{ url_for('inicio') }}">Estudiantes</a> · <a href="{{ url_for('ver_logs') }}">Logs</a> ·{% endif %}
-    <form method="post" action="{{ url_for('preferencias') }}" style="display:inline">
-      <input type="hidden" name="tema" value="{{ 'claro' if tema == 'oscuro' else 'oscuro' }}">
-      <button style="background:none;border:none;cursor:pointer;text-decoration:underline">Tema {{ 'claro' if tema == 'oscuro' else 'oscuro' }}</button>
-    </form> ·
-    <a href="{{ url_for('logout') }}">Salir</a>
-  </span>
-  {% endif %}
+{% if session.usuario %}
+<header class="barra">
+  <div class="barra-in">
+    <a class="logo" href="{{ url_for('inicio') }}"><i>UMB</i>Sistema Académico</a>
+    <nav class="menu">
+      {% set ep = request.endpoint %}
+      {% if session.rol == 'ADMIN' %}
+      <a href="{{ url_for('inicio') }}" class="{{ 'activo' if ep == 'inicio' }}">Panel</a>
+      <a href="{{ url_for('estudiantes') }}" class="{{ 'activo' if ep in ('estudiantes', 'detalle_estudiante') }}">Estudiantes</a>
+      <a href="{{ url_for('cursos') }}" class="{{ 'activo' if ep in ('cursos', 'detalle_curso') }}">Cursos</a>
+      <a href="{{ url_for('auditoria') }}" class="{{ 'activo' if ep == 'auditoria' }}">Auditoría</a>
+      <a href="{{ url_for('ver_logs') }}" class="{{ 'activo' if ep == 'ver_logs' }}">Logs</a>
+      {% else %}
+      <a href="{{ url_for('inicio') }}" class="{{ 'activo' if ep == 'inicio' }}">Mi ficha</a>
+      {% endif %}
+      <a href="{{ url_for('cuenta') }}" class="{{ 'activo' if ep == 'cuenta' }}">Mi cuenta</a>
+    </nav>
+    <div class="usuario">
+      <form method="post" action="{{ url_for('preferencias') }}">
+        {{ csrf() }}
+        <input type="hidden" name="tema" value="{{ 'claro' if tema == 'oscuro' else 'oscuro' }}">
+        <button class="btn-texto" title="Se guarda en MongoDB (colección preferencias)">{{ '☀ Claro' if tema == 'oscuro' else '☾ Oscuro' }}</button>
+      </form>
+      <span class="avatar" title="{{ session.usuario }}">{{ session.usuario[:1] }}</span>
+      <span class="nombre">{{ session.usuario }} · {{ 'Administrador' if session.rol == 'ADMIN' else 'Estudiante' }}</span>
+      <a href="{{ url_for('logout') }}">Salir</a>
+    </div>
+  </div>
 </header>
+{% endif %}
 <main>
   {% for categoria, mensaje in get_flashed_messages(with_categories=true) %}
-    <div class="flash {{ categoria }}">{{ mensaje }}</div>
+    <div class="flash {{ categoria }}" role="status">{{ mensaje }}</div>
   {% endfor %}
   {% block contenido %}{% endblock %}
 </main>

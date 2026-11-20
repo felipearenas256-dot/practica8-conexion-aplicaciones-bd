@@ -63,9 +63,18 @@ def conexion_mysql():
         cnx.close()  # en un pool, close() devuelve la conexión al pool
 
 
-def base_mongo():
-    """Devuelve la base de datos MongoDB (pymongo)."""
-    from pymongo import MongoClient
+_cliente_mongo = None
 
-    cliente = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
-    return cliente[MONGO_DB]
+
+def base_mongo():
+    """
+    Devuelve la base de datos MongoDB (pymongo).
+    MongoClient ya trae su propio pool de conexiones, así que se crea UNA sola
+    vez y se reutiliza (crear un cliente por consulta es lento).
+    """
+    global _cliente_mongo
+    if _cliente_mongo is None:
+        from pymongo import MongoClient
+
+        _cliente_mongo = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
+    return _cliente_mongo[MONGO_DB]
