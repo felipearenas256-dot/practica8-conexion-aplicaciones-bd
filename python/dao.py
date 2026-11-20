@@ -469,6 +469,32 @@ class PerfilDAO:
         base_mongo().estudiantes_perfil.delete_one({"id_estudiante": id_estudiante})
 
 
+def huella_datos():
+    """
+    Resumen corto del estado de las dos bases. Si alguien cambia datos desde
+    Workbench, Compass o un script de Python, la huella cambia y la web se recarga.
+      - MySQL: CHECKSUM TABLE calcula una suma de verificación de cada tabla.
+      - MongoDB: se resume el contenido de las colecciones pequeñas y el último log.
+    """
+    import hashlib
+
+    partes = []
+    with conexion_mysql() as cnx:
+        cur = cnx.cursor()
+        cur.execute("CHECKSUM TABLE Estudiante, Curso, Matricula, Usuario, Auditoria_Matricula")
+        partes.append(str(cur.fetchall()))
+        cur.close()
+    try:
+        db = base_mongo()
+        partes.append(str(list(db.estudiantes_perfil.find({}, {"_id": 0}).sort("id_estudiante", 1))))
+        partes.append(str(list(db.preferencias.find({}, {"_id": 0}).sort("usuario", 1))))
+        ultimo = db.logs.find_one({}, {"_id": 1}, sort=[("_id", -1)])
+        partes.append(f"{db.logs.estimated_document_count()}-{ultimo and ultimo['_id']}")
+    except Exception:
+        partes.append("mongo-apagado")
+    return hashlib.md5("|".join(partes).encode()).hexdigest()
+
+
 def resumen_bases():
     """Conteos de las dos bases para el panel del administrador."""
     with conexion_mysql() as cnx:

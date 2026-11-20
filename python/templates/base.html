@@ -120,6 +120,9 @@
     .lista-actividad small { color:var(--tenue); white-space:nowrap; }
     code { font-size:13px; background:var(--fondo); padding:1px 5px; border-radius:4px; }
 
+    .vivo { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--ok); }
+    .vivo i { width:8px; height:8px; border-radius:50%; background:var(--ok); }
+    .vivo.apagado { color:var(--tenue); } .vivo.apagado i { background:var(--tenue); }
     @media (max-width:640px) {
       .barra-in { gap:8px; padding:8px 16px; }
       nav.menu { order:3; flex-basis:100%; }
@@ -147,6 +150,7 @@
       <a href="{{ url_for('cuenta') }}" class="{{ 'activo' if ep == 'cuenta' }}">Mi cuenta</a>
     </nav>
     <div class="usuario">
+      <span class="vivo" id="vivo" title="La página se recarga sola si los datos cambian en MySQL o MongoDB (Workbench, Compass o Python)"><i></i>En vivo</span>
       <form method="post" action="{{ url_for('preferencias') }}">
         {{ csrf() }}
         <input type="hidden" name="tema" value="{{ 'claro' if tema == 'oscuro' else 'oscuro' }}">
@@ -165,5 +169,30 @@
   {% endfor %}
   {% block contenido %}{% endblock %}
 </main>
+{% if session.usuario %}
+<script>
+  // Sincronización en vivo: cada 3 s pregunta a /api/huella si las bases cambiaron
+  // (por Workbench, Compass, un script de Python u otra pestaña) y recarga la página.
+  // No recarga mientras el usuario está escribiendo en un formulario.
+  (function () {
+    var actual = null, editando = false, indicador = document.getElementById("vivo");
+    document.addEventListener("input", function () { editando = true; });
+    document.addEventListener("submit", function () { editando = true; });
+    function revisar() {
+      if (document.hidden) return;
+      fetch("{{ url_for('huella') }}", { headers: { "Accept": "application/json" } })
+        .then(function (r) { if (!r.ok) throw r; return r.json(); })
+        .then(function (d) {
+          indicador.className = "vivo";
+          if (actual && d.huella !== actual && !editando) { location.reload(); return; }
+          actual = d.huella;
+        })
+        .catch(function () { indicador.className = "vivo apagado"; });
+    }
+    revisar();
+    setInterval(revisar, 3000);
+  })();
+</script>
+{% endif %}
 </body>
 </html>

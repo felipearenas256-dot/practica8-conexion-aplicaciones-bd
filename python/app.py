@@ -25,7 +25,8 @@ from flask import (
 from markupsafe import Markup
 
 from dao import (
-    CursoDAO, EstudianteDAO, LogDAO, MatriculaDAO, PerfilDAO, PreferenciaDAO, UsuarioDAO, resumen_bases,
+    CursoDAO, EstudianteDAO, LogDAO, MatriculaDAO, PerfilDAO, PreferenciaDAO, UsuarioDAO, huella_datos,
+    resumen_bases,
 )
 
 app = Flask(__name__)
@@ -481,6 +482,13 @@ def ver_logs():
     return render_template(
         "logs.html", logs=logs, conteo=conteo, usuarios=usuarios, usuario=usuario, accion=accion,
     )
+
+
+@app.route("/api/huella")
+@login_requerido()
+def huella():
+    """La página la consulta cada 3 s: si cambió, otro programa modificó las bases."""
+    return {"huella": huella_datos()}
 
 
 if __name__ == "__main__":
