@@ -97,7 +97,8 @@ perfiles = db.estudiantes_perfil
 logs = db.logs
 preferencias = db.preferencias
 
-print(f"""
+if __name__ == "__main__":  # el menú solo se muestra al abrir la consola, no al importarla
+    print(f"""
 ================ CONSOLA DE CONSULTAS – PRÁCTICA 8 ================
 MySQL:   {MYSQL_CONFIG['database']} (usuario {MYSQL_CONFIG['user']})
 MongoDB: {MONGO_DB} (colecciones: perfiles, logs, preferencias)
