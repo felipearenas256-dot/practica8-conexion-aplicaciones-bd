@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es" data-tema="{{ tema }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sistema Académico UMB</title>
+  <style>
+    :root { --rojo:#8b0000; --fondo:#f6f6f6; --tarjeta:#fff; --texto:#222; --borde:#ddd; }
+    [data-tema="oscuro"] { --fondo:#16181c; --tarjeta:#22252b; --texto:#e8e8e8; --borde:#3a3d44; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:system-ui, sans-serif; background:var(--fondo); color:var(--texto); }
+    header { background:var(--rojo); color:#fff; padding:12px 24px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+    header a, header button { color:#fff; }
+    main { max-width:1000px; margin:24px auto; padding:0 16px; }
+    .tarjeta { background:var(--tarjeta); border:1px solid var(--borde); border-radius:8px; padding:16px 20px; margin-bottom:20px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--borde); }
+    input, select, button { font:inherit; padding:6px 8px; border:1px solid var(--borde); border-radius:6px; background:var(--tarjeta); color:var(--texto); }
+    button.primario { background:var(--rojo); color:#fff; border:none; cursor:pointer; }
+    .flash { padding:10px 14px; border-radius:6px; margin-bottom:12px; }
+    .ok { background:#e3f4e6; color:#1d5a2a; } .error { background:#fbe4e4; color:#8b0000; }
+    form.linea { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .tabla-scroll { overflow-x:auto; }
+    .bases { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px; }
+    .bases .tarjeta { margin-bottom:20px; }
+    .etiqueta { display:inline-block; font-size:12px; font-weight:600; padding:3px 8px; border-radius:999px; vertical-align:middle; }
+    .etiqueta.mysql { background:#e3edf7; color:#00546b; }
+    .etiqueta.mongo { background:#e3f4e6; color:#1d5a2a; }
+    .nota-base { margin:8px 0 12px; font-size:13px; opacity:.75; }
+    .cifras { display:flex; gap:24px; flex-wrap:wrap; }
+    .cifras div { display:flex; flex-direction:column; }
+    .cifras strong { font-size:26px; font-variant-numeric:tabular-nums; }
+    .cifras span { font-size:13px; opacity:.75; }
+    .chips { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; }
+    .chips span { background:var(--fondo); border:1px solid var(--borde); border-radius:999px; padding:2px 10px; font-size:13px; }
+    pre.json { background:var(--fondo); border:1px solid var(--borde); border-radius:6px; padding:10px; font-size:12px; overflow-x:auto; }
+  </style>
+</head>
+<body>
+<header>
+  <strong>Sistema Académico UMB</strong>
+  {% if session.usuario %}
+  <span>
+    {{ session.usuario }} ({{ session.rol }}) ·
+    {% if session.rol == 'ADMIN' %}<a href="{{ url_for('inicio') }}">Estudiantes</a> · <a href="{{ url_for('ver_logs') }}">Logs</a> ·{% endif %}
+    <form method="post" action="{{ url_for('preferencias') }}" style="display:inline">
+      <input type="hidden" name="tema" value="{{ 'claro' if tema == 'oscuro' else 'oscuro' }}">
+      <button style="background:none;border:none;cursor:pointer;text-decoration:underline">Tema {{ 'claro' if tema == 'oscuro' else 'oscuro' }}</button>
+    </form> ·
+    <a href="{{ url_for('logout') }}">Salir</a>
+  </span>
+  {% endif %}
+</header>
+<main>
+  {% for categoria, mensaje in get_flashed_messages(with_categories=true) %}
+    <div class="flash {{ categoria }}">{{ mensaje }}</div>
+  {% endfor %}
+  {% block contenido %}{% endblock %}
+</main>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block contenido %}
+<div class="tarjeta">
+  <h2>Logs de actividad (MongoDB · colección logs)</h2>
+  <div class="tabla-scroll">
+  <table>
+    <tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Detalle</th></tr>
+    {% for l in logs %}
+    <tr><td>{{ l.fecha.strftime('%Y-%m-%d %H:%M:%S') }}</td><td>{{ l.usuario }}</td><td>{{ l.accion }}</td><td>{{ l.detalle or '' }}</td></tr>
+    {% else %}
+    <tr><td colspan="4">Sin registros.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,26 @@
+# Levanta las dos bases de datos de la práctica:
+#   docker compose up -d
+# MySQL carga sql/universidad_umb.sql automáticamente la primera vez.
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: p8-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./sql/universidad_umb.sql:/docker-entrypoint-initdb.d/01_universidad_umb.sql:ro
+      - mysql_data:/var/lib/mysql
+
+  mongo:
+    image: mongo:7
+    container_name: p8-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mysql_data:
+  mongo_data:

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block contenido %}
+<div class="tarjeta" style="max-width:360px;margin:60px auto">
+  <h2>Iniciar sesión</h2>
+  <form method="post" style="display:grid;gap:10px">
+    <input name="username" placeholder="Usuario" required autofocus>
+    <input name="password" type="password" placeholder="Contraseña" required>
+    <button class="primario">Entrar</button>
+  </form>
+</div>
+{% endblock %}
