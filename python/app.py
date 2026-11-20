@@ -32,6 +32,7 @@ from dao import (
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY") or os.urandom(24)
 app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
+app.json.ensure_ascii = False  # el JSON mostrado conserva las tildes (Gómez, no Gómez)
 
 MAX_INTENTOS = 5        # intentos fallidos permitidos...
 MINUTOS_BLOQUEO = 10    # ...en esta ventana de tiempo

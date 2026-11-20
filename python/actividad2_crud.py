@@ -34,13 +34,14 @@ def imprimir_estudiantes(filas):
     if not filas:
         print("  (sin resultados)")
         return
-    print(f"\n  {'ID':<4}{'Nombre':<12}{'Apellido':<12}{'Nacimiento':<12}{'Email':<32}{'Prom.':<7}{'Estado'}")
-    print("  " + "-" * 90)
+    print(f"\n  {'ID':<4}{'Nombre':<15}{'Apellido':<15}{'Nacimiento':<12}{'Email':<32}{'Prom.':<7}{'Estado'}")
+    print("  " + "-" * 96)
     for e in filas:
         prom = "" if e.get("Promedio") is None else str(e["Promedio"])
+        # [:14] recorta los textos largos para que las columnas no se descuadren
         print(
-            f"  {e['IdEstudiante']:<4}{e['Nombre']:<12}{e['Apellido']:<12}"
-            f"{str(e.get('FechaNacimiento', '')):<12}{e.get('Email') or '':<32}{prom:<7}{e.get('EstadoAcademico', '')}"
+            f"  {e['IdEstudiante']:<4}{e['Nombre'][:14]:<15}{e['Apellido'][:14]:<15}"
+            f"{str(e.get('FechaNacimiento', '')):<12}{(e.get('Email') or '')[:31]:<32}{prom:<7}{e.get('EstadoAcademico', '')}"
         )
 
 

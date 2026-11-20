@@ -30,10 +30,11 @@ try:
     )
     filas = cursor.fetchall()
 
-    print(f"\n{'ID':<4}{'Nombre':<12}{'Apellido':<12}{'Email':<32}{'Estado'}")
-    print("-" * 72)
+    print(f"\n{'ID':<4}{'Nombre':<15}{'Apellido':<15}{'Email':<32}{'Estado'}")
+    print("-" * 78)
     for id_est, nombre, apellido, email, estado in filas:
-        print(f"{id_est:<4}{nombre:<12}{apellido:<12}{email:<32}{estado}")
+        # [:14] recorta los textos largos para que las columnas no se descuadren
+        print(f"{id_est:<4}{nombre[:14]:<15}{apellido[:14]:<15}{(email or '')[:31]:<32}{estado}")
     print(f"\nTotal de estudiantes: {cursor.rowcount}")
 
 except mysql.connector.Error as err:
